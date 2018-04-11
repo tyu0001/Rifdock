@@ -211,18 +211,35 @@ void HBondedPairGenerator::init(
 		//rtype2op_ = rts.lock()->name_map(resn2).clone();
 
 		//TYU change what residue get loaded base on d_l_map_
+		// first one is D seoncd one is L
  		if (rot_index.d_l_map_.find(resn1) != rot_index.d_l_map_.end() && rot_index.d_l_map_.find(resn2) == rot_index.d_l_map_.end()) {
  			core::chemical::ResidueTypeCOP rt_tmp = rts.lock() -> name_map(rot_index.d_l_map_.find(resn1)->second).get_self_ptr();
  			core::chemical::ResidueTypeCOP tmp_dcop = rts.lock() -> get_d_equivalent(rt_tmp);
  			rtype1op_ = tmp_dcop -> clone();
  			rtype2op_ = rts.lock() -> name_map(resn2).clone();
  		} 
+ 		// first one is L seoncd one is D
  		else if (rot_index.d_l_map_.find(resn1) == rot_index.d_l_map_.end() && rot_index.d_l_map_.find(resn2) != rot_index.d_l_map_.end()) {
  			rtype1op_ = rts.lock() -> name_map(resn1).clone();
 			core::chemical::ResidueTypeCOP rt_tmp = rts.lock() -> name_map(rot_index.d_l_map_.find(resn2)->second).get_self_ptr();
  			core::chemical::ResidueTypeCOP tmp_dcop = rts.lock() -> get_d_equivalent(rt_tmp);
  			rtype2op_ = tmp_dcop -> clone();
  		}
+ 		// both D
+ 		else if (rot_index.d_l_map_.find(resn1) != rot_index.d_l_map_.end() && rot_index.d_l_map_.find(resn2) != rot_index.d_l_map_.end()) {
+ 			core::chemical::ResidueTypeCOP rt1_tmp = rts.lock() -> name_map(rot_index.d_l_map_.find(resn1)->second).get_self_ptr();
+ 			core::chemical::ResidueTypeCOP tmp1_dcop = rts.lock() -> get_d_equivalent(rt1_tmp);
+ 			rtype1op_ = tmp1_dcop -> clone();
+			core::chemical::ResidueTypeCOP rt2_tmp = rts.lock() -> name_map(rot_index.d_l_map_.find(resn2)->second).get_self_ptr();
+ 			core::chemical::ResidueTypeCOP tmp2_dcop = rts.lock() -> get_d_equivalent(rt2_tmp);
+ 			rtype2op_ = tmp2_dcop -> clone();
+ 		}
+		// both L
+ 		else {
+			rtype1op_ = rts.lock() -> name_map(resn1).clone();
+ 			rtype2op_ = rts.lock() -> name_map(resn2).clone();
+ 		}
+		
 		std::cout << "----done-----" << std::endl;
 		if( rtype1op_->has( "H" ) && resn1 != "GLY" ) rtype1op_->set_atom_type( "H", "VIRT" );
 		if( rtype1op_->has( "O" ) && resn1 != "GLY" ) rtype1op_->set_atom_type( "O", "VIRT" );
@@ -231,16 +248,15 @@ void HBondedPairGenerator::init(
  		// core::chemical::ResidueType const & rtype1 = rts.lock()->name_map(resn1);
 		// core::chemical::ResidueType const & rtype2 = rts.lock()->name_map(resn2);
 	}
-
 	core::chemical::ResidueType const & rtype1 = *rtype1op_;
 	core::chemical::ResidueType const & rtype2 = *rtype2op_;
 	core::conformation::ResidueOP res1op, res2op;
 	#pragma omp critical
 	{
+		std::cout << rtype1.name3() << std::flush << std::endl;
 		res1op = core::conformation::ResidueFactory::create_residue(rtype1);
 		res2op = core::conformation::ResidueFactory::create_residue(rtype2);
 	}
-
 	if( exemplars.find(resn1) == exemplars.end() ){
 		pose0_.append_residue_by_jump( *res1op, 1 );
 	} else {
